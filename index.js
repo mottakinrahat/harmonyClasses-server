@@ -30,9 +30,14 @@ async function run() {
 
     const studentCollection=client.db('musicSchool').collection('students');
     const classesCollection=client.db('musicSchool').collection('classes');
+    const teachersCollection=client.db('musicSchool').collection('teachers');
  
    app.get('/classes',async(req,res)=>{
     const result = await classesCollection.find().sort({ enrolled_students: -1 }).toArray();
+   res.send(result);
+   })
+   app.get('/teachers',async(req,res)=>{
+    const result = await teachersCollection.find().toArray();
    res.send(result);
    })
 
