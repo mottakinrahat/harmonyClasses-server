@@ -29,6 +29,12 @@ async function run() {
     await client.connect();
 
     const studentCollection=client.db('musicSchool').collection('students');
+    const classesCollection=client.db('musicSchool').collection('classes');
+ 
+   app.get('/classes',async(req,res)=>{
+    const result = await classesCollection.find().sort({ enrolled_students: -1 }).toArray();
+   res.send(result);
+   })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
