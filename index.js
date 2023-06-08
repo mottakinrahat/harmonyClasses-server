@@ -31,6 +31,16 @@ async function run() {
     const studentCollection=client.db('musicSchool').collection('students');
     const classesCollection=client.db('musicSchool').collection('classes');
     const teachersCollection=client.db('musicSchool').collection('teachers');
+
+    app.get('classes',async(req,res)=>{
+    const email=req.query.email;
+    if(!email){
+      res.send([])
+    }
+    const query={email:email}
+    const result=await classesCollection.findOne(query).toArray();
+    res.send(result);
+    })
  
    app.get('/classes',async(req,res)=>{
     const result = await classesCollection.find().sort({ enrolled_students: -1 }).toArray();
@@ -39,6 +49,17 @@ async function run() {
    app.get('/teachers',async(req,res)=>{
     const result = await teachersCollection.find().toArray();
    res.send(result);
+   })
+
+   app.post('/addClasses',async(req,res)=>{
+    const item=req.body;
+    console.log(item);
+    const result =await studentCollection.insertOne(item);
+    res.send(result);
+   })
+   app.get('/addClasses',async(req,res)=>{
+    const result=await studentCollection.find().toArray();
+    res.send(result);
    })
 
     // Send a ping to confirm a successful connection
