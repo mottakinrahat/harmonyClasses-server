@@ -28,10 +28,24 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
+    const userCollection=client.db('musicSchool').collection('users');
     const studentCollection=client.db('musicSchool').collection('students');
     const classesCollection=client.db('musicSchool').collection('classes');
     const teachersCollection=client.db('musicSchool').collection('teachers');
+//user related api
+app.post('/users',async(req,res)=>{
+  const user=req.body;
+  const query={email:user.email}
+  const existingUser=await userCollection.findOne(query);
+  if(existingUser){
+    return res.send({message: 'User already exists'})
+  }
+  const result=await userCollection.insertOne(user);
+  res.send(result)
+})
+  
 
+//class related api
     app.get('classes',async(req,res)=>{
     const email=req.query.email;
     if(!email){
@@ -46,6 +60,7 @@ async function run() {
     const result = await classesCollection.find().sort({ enrolled_students: -1 }).toArray();
    res.send(result);
    })
+   //instructor related api
    app.get('/teachers',async(req,res)=>{
     const result = await teachersCollection.find().toArray();
    res.send(result);
