@@ -77,6 +77,16 @@ app.post('/users',async(req,res)=>{
     res.send(result);
    })
 
+   app.get('/oneClass',async(req,res)=>{
+    const email=req.query.email;
+    if(!email){
+      res.send([])
+    }
+    const query={email: email}
+    const result=await studentCollection.find(query).toArray();
+    res.send(result);
+   })
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
