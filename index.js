@@ -82,6 +82,30 @@ app.patch('/users/admin/:id',async(req,res)=>{
  const result=await userCollection.updateOne(filter, updateDoc);
  res.send(result);
 })
+
+app.get('/users/admin/:email',async (req, res) =>{
+  const email=req.params.email;
+  const query={email:email}
+  const user=await userCollection.findOne(query);
+  const result={admin:user?.role==='admin'};
+  res.send(result);
+})
+app.get('/users/instructor/:email',async (req, res) =>{
+  const email=req.params.email;
+  const query={email:email}
+  const user=await userCollection.findOne(query);
+  const result={instructor:user?.role==='instructor'};
+  res.send(result);
+})
+//student
+app.get('/users/student/:email',async (req, res) =>{
+  const email=req.params.email;
+  const query={email:email}
+  const user=await userCollection.findOne(query);
+  const result={student:user?.role==='student'};
+  res.send(result);
+})
+
 app.patch('/users/instructor/:id',async(req,res)=>{
   const id=req.params.id;
  const filter={_id:new ObjectId(id)};
@@ -96,11 +120,16 @@ app.patch('/users/instructor/:id',async(req,res)=>{
   
 
 //class related api
-    app.get('classes',async(req,res)=>{
+    app.get('classes',verifyJWT,async(req,res)=>{
     const email=req.query.email;
     if(!email){
       res.send([])
     }
+const decodedEmail=req.decoded.email;
+if(email!==decodedEmail){
+  return res.send.status(403).send({error:true,message:'forbidden access'});
+}
+
     const query={email:email}
     const result=await classesCollection.findOne(query).toArray();
     res.send(result);
