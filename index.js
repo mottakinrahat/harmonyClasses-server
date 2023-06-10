@@ -2,7 +2,7 @@ const express = require('express');
 var jwt = require('jsonwebtoken');
 const app = express();
 require('dotenv').config();
-const stripe=require('stripe')(process.env.PAYMENT_SECRET_KEY)
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
 const port = process.env.PORT || 5000;
@@ -13,7 +13,7 @@ app.use(express.json());
 const verifyJWT = (req, res, next) => {
   const authorization = req.headers.authorization;
   if (!authorization) {
-    return res.send.status(401).send({ error: true, message: 'unauthorized access' });
+    return res.status(401).send({ error: true, message: 'unauthorized access' });
   }
 
   const token = authorization.split(' ')[1];
@@ -67,6 +67,25 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result)
     })
+    app.get('/paymentClasses', async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email }
+      const result = await studentCollection.find(query).toArray();
+      const classes = await Promise.all(result.map(async (item) => {
+        const classData = await classesCollection.findOne({_id:new ObjectId(item.classId)});
+        const price = classData ? classData.price : 0;
+        return { ...item, price };
+      }));
+    
+      res.send(classes);
+    })
+    app.get('/payment',async(req,res)=>{
+      const email = req.query.email;
+      const query = { email: email };
+      const result=await paymentCollection.find(query).toArray();
+      res.send(result);
+
+    })
 
     app.get('/users', async (req, res) => {
       const result = await userCollection.find().toArray();
@@ -101,24 +120,30 @@ async function run() {
     })
 
     //create payment intent
-  app.post('/create_payment_intent',async(req,res) => {
-    const{price}=req.body;
-    const amount=price*100;
-    const paymentIntent=await stripe.paymentIntents.create({
-      amount: amount,
-      currency: 'USD',
-      payment_method_types:['card']
-    });
-    res.send({
-      clientSecret:paymentIntent.client_secret
+    app.post('/create_payment_intent', async (req, res) => {
+      const { price } = req.body;
+      const amount = price * 100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'USD',
+        payment_method_types: ['card']
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
     })
-  })
 
-  app.post('/payments',verifyJWT,async(req,res) => {
-    const payment=req.body;
-    const result=await paymentCollection.insertOne(payment)
-    res.send(result);
-  })
+    app.post('/payments', verifyJWT, async (req, res) => {
+      const payment = req.body;
+      const result = await paymentCollection.insertOne(payment)
+      res.send(result);
+    })
+    app.get('/payments', async (req, res) => {
+      const result = await paymentCollection.find().toArray();
+      res.send(result);
+    })
+
+
 
     //student
     app.get('/users/student/:email', async (req, res) => {
@@ -178,19 +203,19 @@ async function run() {
       const item = req.body;
       const result = await studentCollection.insertOne(item);
 
-      const classId=item.classId;
-      const filter={_id:new ObjectId(classId)}
+      const classId = item.classId;
+      const filter = { _id: new ObjectId(classId) }
       const classData = await classesCollection.findOne(filter);
-      console.log('class-data',classData);
+      console.log('class-data', classData);
       if (classData.available_sits === 0) {
         return res.status(400).send({ error: true, message: 'Class is full. No available seats.' });
       }
-    
-      const updateDoc={
-        $inc:{available_sits:-1,enrolled_students:+1}
+
+      const updateDoc = {
+        $inc: { available_sits: -1, enrolled_students: +1 }
       };
-     const updateResult=await classesCollection.updateOne(filter, updateDoc);
-     console.log(updateResult);
+      const updateResult = await classesCollection.updateOne(filter, updateDoc);
+      console.log(updateResult);
       res.send(updateResult);
 
     })
@@ -210,7 +235,7 @@ async function run() {
     })
     app.get('/nextClasses', async (req, res) => {
       const email = req.query.email;
-     
+
       if (!email) {
         res.send([])
       }
