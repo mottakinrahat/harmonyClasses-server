@@ -2,6 +2,7 @@ const express = require('express');
 var jwt = require('jsonwebtoken');
 const app = express();
 require('dotenv').config();
+const stripe=require('stripe')(process.env.PAYMENT_SECRET_KEY)
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
 const port = process.env.PORT || 5000;
@@ -47,6 +48,7 @@ async function run() {
     const studentCollection = client.db('musicSchool').collection('students');
     const classesCollection = client.db('musicSchool').collection('classes');
     const teachersCollection = client.db('musicSchool').collection('teachers');
+    const paymentCollection = client.db('musicSchool').collection('payments');
 
     app.post('/jwt', async (req, res) => {
       const user = req.body;
@@ -97,6 +99,27 @@ async function run() {
       const result = { instructor: user?.role === 'instructor' };
       res.send(result);
     })
+
+    //create payment intent
+  app.post('/create_payment_intent',async(req,res) => {
+    const{price}=req.body;
+    const amount=price*100;
+    const paymentIntent=await stripe.paymentIntents.create({
+      amount: amount,
+      currency: 'USD',
+      payment_method_types:['card']
+    });
+    res.send({
+      clientSecret:paymentIntent.client_secret
+    })
+  })
+
+  app.post('/payments',verifyJWT,async(req,res) => {
+    const payment=req.body;
+    const result=await paymentCollection.insertOne(payment)
+    res.send(result);
+  })
+
     //student
     app.get('/users/student/:email', async (req, res) => {
       const email = req.params.email;
@@ -157,11 +180,11 @@ async function run() {
 
       const classId=item.classId;
       const filter={_id:new ObjectId(classId)}
-      // const classData = await classesCollection.findOne(filter);
-      // console.log('class-data',classData);
-      // if (classData.available_sits === 0) {
-      //   return res.status(400).send({ error: true, message: 'Class is full. No available seats.' });
-      // }
+      const classData = await classesCollection.findOne(filter);
+      console.log('class-data',classData);
+      if (classData.available_sits === 0) {
+        return res.status(400).send({ error: true, message: 'Class is full. No available seats.' });
+      }
     
       const updateDoc={
         $inc:{available_sits:-1,enrolled_students:+1}
