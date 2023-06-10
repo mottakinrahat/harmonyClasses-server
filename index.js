@@ -151,23 +151,25 @@ async function run() {
       res.send(result);
     })
 
-    app.post('/addClasses', async (req, res) => {
+    app.patch('/addClasses', async (req, res) => {
       const item = req.body;
-      console.log(item);
       const result = await studentCollection.insertOne(item);
 
       const classId=item.classId;
       const filter={_id:new ObjectId(classId)}
-      const classData = await classesCollection.findOne(filter);
-      if (classData.available_sits === 0) {
-        return res.status(400).send({ error: true, message: 'Class is full. No available seats.' });
-      }
+      // const classData = await classesCollection.findOne(filter);
+      // console.log('class-data',classData);
+      // if (classData.available_sits === 0) {
+      //   return res.status(400).send({ error: true, message: 'Class is full. No available seats.' });
+      // }
     
       const updateDoc={
         $inc:{available_sits:-1,enrolled_students:+1}
       };
-      await classesCollection.updateOne(filter, updateDoc);
-      res.send(result);
+     const updateResult=await classesCollection.updateOne(filter, updateDoc);
+     console.log(updateResult);
+      res.send(updateResult);
+
     })
     app.get('/addClasses', async (req, res) => {
       const result = await studentCollection.find().toArray();
