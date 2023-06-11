@@ -4,6 +4,7 @@ const app = express();
 require('dotenv').config();
 const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+
 const cors = require('cors');
 const port = process.env.PORT || 5000;
 
@@ -72,17 +73,17 @@ async function run() {
       const query = { email: email }
       const result = await studentCollection.find(query).toArray();
       const classes = await Promise.all(result.map(async (item) => {
-        const classData = await classesCollection.findOne({_id:new ObjectId(item.classId)});
+        const classData = await classesCollection.findOne({ _id: new ObjectId(item.classId) });
         const price = classData ? classData.price : 0;
         return { ...item, price };
       }));
-    
+
       res.send(classes);
     })
-    app.get('/payment',async(req,res)=>{
+    app.get('/payment', async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
-      const result=await paymentCollection.find(query).toArray();
+      const result = await paymentCollection.find(query).toArray();
       res.send(result);
 
     })
@@ -103,6 +104,43 @@ async function run() {
       const result = await userCollection.updateOne(filter, updateDoc);
       res.send(result);
     })
+    app.patch('/users/approved/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: {
+          status: 'approved'
+        },
+      };
+      const result = await classesCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    })
+    app.patch('/users/denied/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: {
+          status: 'denied'
+        },
+      };
+      const result = await classesCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+    app.patch('/users/feedback/:id', async (req, res) => {
+      const id = req.params.id;
+      const feedbackData= req.body.feedbackData;
+      const filter = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: {
+          feedback: feedbackData
+        },
+      };
+      const result = await classesCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+
+  
 
     app.get('/users/admin/:email', async (req, res) => {
       const email = req.params.email;
